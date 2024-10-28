@@ -1,0 +1,104 @@
+#install pillow
+#install Tkinter
+#install googletrans==3.1.0a0
+#install paperclip
+#install gTTS
+!pip  install pillow
+#pip install Tkinter
+!pip install googletrans==3.1.0a0
+!pip install paperclip
+!pip install gTTS
+!apt-get install xvfb
+!pip install pyvirtualdisplay
+!pip install xvfbwrapper
+
+from transformers import MarianMTModel, MarianTokenizer
+from gtts import gTTS
+from textblob import TextBlob
+import os
+
+# Supported language pairs
+languages = {
+    "English": "en",
+    "French": "fr",
+    "Spanish": "es",
+    "German": "de",
+    "Italian": "it",
+    "Portuguese": "pt",
+    "Dutch": "nl",
+    "Russian": "ru",
+    "Chinese": "zh",
+    "Japanese": "ja",
+}
+
+# Display available languages
+def show_language_options():
+    print("Available languages:")
+    for i, (lang, code) in enumerate(languages.items(), start=1):
+        print(f"{i}. {lang} ({code})")
+
+# Load the model and tokenizer
+def load_model_and_tokenizer(src_lang, tgt_lang):
+    model_name = f'Helsinki-NLP/opus-mt-{src_lang}-{tgt_lang}'
+    try:
+        model = MarianMTModel.from_pretrained(model_name)
+        tokenizer = MarianTokenizer.from_pretrained(model_name)
+    except:
+        print(f"Translation model for {src_lang} to {tgt_lang} not found.")
+        return None, None
+    return model, tokenizer
+
+# Translate function
+def translate(text, src_lang, tgt_lang):
+    model, tokenizer = load_model_and_tokenizer(src_lang, tgt_lang)
+    if model is None or tokenizer is None:
+        return None
+
+    # Tokenize and translate
+    translated = model.generate(**tokenizer(text, return_tensors="pt", padding=True))
+
+    # Decode the translated text
+    translated_text = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
+
+    return translated_text[0]
+
+# Perform sentiment analysis
+def analyze_sentiment(text):
+    blob = TextBlob(text)
+    sentiment = blob.sentiment
+    return sentiment.polarity, sentiment.subjectivity
+
+# Convert text to speech
+def text_to_speech(text, lang):
+    tts = gTTS(text=text, lang=lang, slow=False)
+    tts.save("translated_text.mp3")
+    os.system("start translated_text.mp3")
+
+# Main function to run the translator
+def main():
+    show_language_options()
+
+    # User chooses the source and target languages
+    src_choice = int(input("Choose the source language (enter the number): "))
+    tgt_choice = int(input("Choose the target language (enter the number): "))
+
+    src_lang = list(languages.values())[src_choice - 1]
+    tgt_lang = list(languages.values())[tgt_choice - 1]
+
+    text_to_translate = input("Enter the text to translate: ")
+
+    translated_text = translate(text_to_translate, src_lang, tgt_lang)
+    if translated_text is None:
+        return
+
+    print(f"\nTranslated Text: {translated_text}")
+
+    # Perform sentiment analysis on the translated text
+    polarity, subjectivity = analyze_sentiment(translated_text)
+    print(f"\nSentiment Analysis: Polarity={polarity}, Subjectivity={subjectivity}")
+
+    # Convert the translated text to speech
+    text_to_speech(translated_text, tgt_lang)
+
+if __name__ == "__main__":
+    main()
